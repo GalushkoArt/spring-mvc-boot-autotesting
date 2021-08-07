@@ -25,8 +25,7 @@ public class MapBackedAccountRepository implements AccountRepository {
             accountData.getAmount()
         );
 
-        accounts.put(newAccount.getId(), newAccount);
-        return newAccount;
+        return accounts.put(newAccount.getId(), newAccount);
     }
 
     @Override

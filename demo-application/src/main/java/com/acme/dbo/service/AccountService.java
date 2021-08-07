@@ -1,11 +1,13 @@
 package com.acme.dbo.service;
 
 
+import com.acme.dbo.controller.AccountAlreadyExistException;
 import com.acme.dbo.dao.AccountRepository;
 import com.acme.dbo.domain.Account;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
+import java.util.Optional;
 
 @Service
 public class AccountService {
@@ -16,7 +18,7 @@ public class AccountService {
     }
 
     public Account create(Account accountData) {
-        return accounts.create(accountData);
+        return Optional.ofNullable(accounts.create(accountData)).orElseThrow(AccountAlreadyExistException::new);
     }
 
     public Account findById(Integer id) {

@@ -19,7 +19,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -43,13 +46,14 @@ public class AccountCrudControllerIT {
 
     @Test
     public void shouldGetNoAccountsWhenNoCreated() throws Exception {
+        reset(accountRepositoryStub);
+
         mockMvc.perform(get("/api/account"))
                 .andDo(print()).andExpect(status().isOk())
                 .andExpect(jsonPath("$").isEmpty());
     }
 
     @Test
-    @DirtiesContext
     public void shouldGetAccountWhenCreated() throws Exception {
         when(accountRepositoryStub
                 .create(new Account(new BigDecimal("1.11"))))
@@ -63,5 +67,57 @@ public class AccountCrudControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.amount").value(new BigDecimal("1.11")));
+    }
+
+    @Test
+    public void createExistAccountReturnsBadRequestTest() throws Exception {
+        when(accountRepositoryStub
+                .create(new Account(1, new BigDecimal("1245"))))
+                .thenReturn(null);
+
+        mockMvc.perform(post("/api/account")
+                .content(mapper.writeValueAsString(new Account(1, new BigDecimal("1245"))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .characterEncoding("utf-8"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void getByExistIdTest() throws Exception {
+        when(accountRepositoryStub
+                .findById(1)).thenReturn(new Account(1, new BigDecimal("1245")));
+
+        mockMvc.perform(get("/api/account/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .characterEncoding("utf-8"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.amount").value("1245"));
+    }
+
+    @Test
+    public void getByNotExistIdTest() throws Exception {
+        when(accountRepositoryStub.findById(754)).thenReturn(null);
+
+        mockMvc.perform(get("/api/account/754")
+                .contentType(MediaType.APPLICATION_JSON)
+                .characterEncoding("utf-8"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void getAllNotEmptyTest() throws Exception {
+        when(accountRepositoryStub.findAll()).thenReturn(List.of(new Account(52, new BigDecimal("124")), new Account(51, new BigDecimal("555"))));
+
+        mockMvc.perform(get("/api/account")
+                .contentType(MediaType.APPLICATION_JSON)
+                .characterEncoding("utf-8"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[2]").doesNotExist())
+                .andExpect(jsonPath("$[0].id").value("52"))
+                .andExpect(jsonPath("$[1].id").value("51"))
+                .andExpect(jsonPath("$[0].amount").value("124"))
+                .andExpect(jsonPath("$[1].amount").value("555"));
     }
 }
